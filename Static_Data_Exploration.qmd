@@ -1,0 +1,123 @@
+---
+title: "Static Data Exploration"
+format: html
+editor: visual
+author: Elizabeth Batson
+---
+
+# Data Exploration: numerical and graphical summaries
+```{r}
+#| output: false
+
+library(readr)
+library(tidyverse)
+library(ggstatsplot)
+```
+
+```{r}
+# read in the data
+df <- read_csv("user_behavior_dataset.csv")
+head(df)
+```
+
+## Contingency Tables
+
+```{r}
+# 1-way
+table(df$`Device Model`)
+table(df$`Operating System`)
+table(df$Gender)
+
+# 2-way
+table(df$`Operating System`, df$Gender)
+table(df$`Device Model`, df$`Operating System`)
+```
+
+## Numerical Summaries
+
+```{r}
+# function for finding measures of center and spread
+find_center_and_spread <- function(df, group) {
+  return(df|>
+    group_by({{group}}) |>
+    summarize(across(where(is.numeric), 
+                 list("mean" = mean, "median" = median, "sd"=sd, "IQR"=IQR), 
+                 .names = "{.fn}_{.col}")))
+}
+
+# update column types so IDs and behavior class are not numeric
+df <- df |>
+      mutate(`User ID`=as.character(`User ID`)) |>
+      mutate(`User Behavior Class`=as.factor(`User Behavior Class`))
+
+# find centers and spread for all numeric vars, grouped by each categorical var
+find_center_and_spread(df, `Device Model`)
+find_center_and_spread(df, `Operating System`)
+find_center_and_spread(df, Gender)
+```
+
+## Plots
+
+```{r}
+# kernel density plots
+ggplot(df, aes(x = `App Usage Time (min/day)`)) + geom_density(alpha = 0.5, aes(fill = Gender)) + ggtitle("App Usage Time Distribution By Gender")
+ggplot(df, aes(x = `App Usage Time (min/day)`)) + geom_density(alpha = 0.5, aes(fill = `Operating System`)) + ggtitle("App Usage Time Distribution By Operating System")
+ggplot(df, aes(x = `Age`)) + geom_density(alpha = 0.5, aes(fill = `Operating System`)) + ggtitle("Age Distribution By Operating System")
+```
+
+```{r}
+# Scatter plots
+ggplot(df, aes(x = `Operating System`, y = `App Usage Time (min/day)`, color = Gender)) + geom_point(position = "jitter") + ggtitle("App Usage Time vs. Operating System (Color=Gender)")
+ggplot(df, aes(x = `Age`, y = `Screen On Time (hours/day)`, color = Gender)) + geom_point(position = "jitter") + ggtitle("Screen On Time vs. Age (Color=Gender)")
+ggplot(df, aes(x = `Age`, y = `Number of Apps Installed`, color = `Operating System`)) + geom_point(position = "jitter") + ggtitle("Number of Apps Installed vs. Age (Color=Operating System)")
+```
+
+
+```{r}
+# scatter plots with faceting
+ggplot(df, aes(x = `Screen On Time (hours/day)`, y = `App Usage Time (min/day)`, color = Gender)) + geom_point(position = "jitter") + 
+  ggtitle("App Usage Time vs. Screen On Time by Operating System (color=Gender)") +
+  facet_wrap(~ `Operating System`)
+ggplot(df, aes(x = `Screen On Time (hours/day)`, y = `Battery Drain (mAh/day)`)) + geom_point(position = "jitter") + 
+  ggtitle("Battery Drain vs. Screen On Time by Device Model") +
+  facet_wrap(~ `Device Model`)
+```
+
+
+```{r}
+# boxplots
+ggplot(df) + geom_boxplot(aes(x = `Operating System`, y = `Battery Drain (mAh/day)`, fill = `Operating System`)) + ggtitle("Battery Drain vs. Operating System")
+ggplot(df) + geom_boxplot(aes(x = `Device Model`, y = `Battery Drain (mAh/day)`, fill = `Device Model`)) + ggtitle("Battery Drain vs. Device Model")
+ggplot(df) + geom_boxplot(aes(x = `Device Model`, y = `Age`, fill = `Device Model`)) + ggtitle("Age vs. Device Model")
+```
+
+
+```{r}
+# heat maps
+ggplot(df, aes(x=`Screen On Time (hours/day)`, y=`Battery Drain (mAh/day)`)) + geom_bin_2d() + ggtitle("Battery Drain vs. Screen On Time")
+ggplot(df, aes(x=`Age`, y=`Screen On Time (hours/day)`)) + geom_bin_2d(binwidth=c(5, 2)) + ggtitle("Screen On Time vs. Age")
+```
+
+
+```{r}
+# pie charts
+ggpiestats(
+  data         = df,
+  x            = Gender,
+  y            = `Device Model`,
+  package      = "wesanderson",
+  palette      = "Royal1",
+  title        = "Gender of Users by Device Model",
+  legend.title = "Gender"
+)
+
+ggpiestats(
+  data         = df,
+  x            = Gender,
+  y            = `Operating System`,
+  package      = "wesanderson",
+  palette      = "Royal1",
+  title        = "Gender of Users by Operating System",
+  legend.title = "Gender"
+)
+```

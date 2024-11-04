@@ -1,4 +1,9 @@
 library(shiny)
+library(readr)
+library(tidyverse)
+library(ggstatsplot)
+
+df <- read_csv("user_behavior_dataset.csv")
 
 ui <- fluidPage(
   sidebarLayout(
@@ -11,7 +16,7 @@ ui <- fluidPage(
                          choiceNames=c("App Usage Time", "Screen On Time", "Battery Drain", "Number of Apps Installed", "Data Usage", "Age")),
       sliderInput("var1_range", "Range for first variable", min=0, max=1000, value=c(0, 1000)),
       sliderInput("var2_range", "Range for second variable", min=0, max=1000, value=c(0, 1000)),
-      actionButton("go", "Filter Data")
+      actionButton("go_subset", "Filter Data")
     ),
     
     mainPanel(
@@ -21,7 +26,9 @@ ui <- fluidPage(
         ),
         
         tabPanel(
-          "Data Download", "tab2 content"
+          "Data Download", 
+          DT::dataTableOutput('tbl'),
+          downloadButton("go_download", "Download Data")
         ),
         
         tabPanel(
@@ -63,7 +70,20 @@ ui <- fluidPage(
 )
 
 server <- function(input, output, session) {
-
+  cur_data <- df
+  
+  # table to display in Data Download tab
+  output$tbl = DT::renderDT(cur_data)
+  
+  # handler for download button
+  output$go_download <- downloadHandler(
+    filename = function() {
+      paste0('mobile_phone_data_', Sys.Date(), '.csv')
+    },
+    content = function(file) {
+      write.csv(cur_data, file)
+    }
+  )
 }
 
 # Run the application 

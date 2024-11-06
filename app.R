@@ -24,7 +24,7 @@ ui <- fluidPage(
       
       h3("Filter Data Based on Categorical Varaibles"),
       selectInput("OS_selection", "Operating System", choices=c("Android", "iOS"), multiple=TRUE),
-      selectInput("model_selection", "Device Model", choices=c("Google Pixel 5", "OnePlus 9", "Xiaomi Mi 11", "	iPhone 12", "Samsung Galaxy S21"), multiple=TRUE),
+      selectInput("model_selection", "Device Model", choices=c("Google Pixel 5", "OnePlus 9", "Xiaomi Mi 11", "iPhone 12", "Samsung Galaxy S21"), multiple=TRUE),
       
       h3("Filter Data Based on Numerical Variables"),
       
@@ -125,33 +125,53 @@ server <- function(input, output, session) {
   
   # subset data on download page when user clicks "filter data" action button
   observeEvent(input$go_subset, {
-    print("cur_data1")
-    print(cur_data)
+    cur_data <- df
     
-    cur_data <- cur_data |>
-      filter(`Operating System` %in% input$OS_selection) |>
-      filter(`Device Model` %in% input$model_selection) |>
-      filter(!!sym(input$num_var1) >= input$var1_range[1]) |>
-      filter(!!sym(input$num_var1) <= input$var1_range[2]) |>
-      filter(!!sym(input$num_var2) >= input$var2_range[1]) |>
-      filter(!!sym(input$num_var2) <= input$var2_range[2])
+    # check which filter values exist and use them to filter the data
+    if(length(input$OS_selection)>0)    cur_data <- filter(cur_data, `Operating System` %in% input$OS_selection)
+    if(length(input$model_selection)>0) cur_data <- filter(cur_data, `Device Model` %in% input$model_selection)
+
+    if(length(input$var1_range[1])>0) {
+      cur_data <- cur_data |>
+                  filter(!!sym(input$num_var1) >= input$var1_range[1]) |>
+                  filter(!!sym(input$num_var1) <= input$var1_range[2])}
+
+    if(length(input$var2_range[1])>0) {
+      cur_data <- cur_data |>
+                  filter(!!sym(input$num_var2) >= input$var2_range[1]) |>
+                  filter(!!sym(input$num_var2) <= input$var2_range[2])}
     
-    print("cur_data2")
-    print(cur_data)
-    
+    # update download data
     proxy <- DT::dataTableProxy('tbl')
     DT::replaceData(proxy, cur_data)
   })
   
   # table to display in Data Download tab
   output$tbl = DT::renderDT(cur_data)
-  
+
   # handler for download button
   output$go_download <- downloadHandler(
     filename = function() {
       paste0('mobile_phone_data_', Sys.Date(), '.csv')
     },
     content = function(file) {
+      
+      cur_data <- df
+      
+      # check which filter values exist and use them to filter the data
+      if(length(input$OS_selection)>0)    cur_data <- filter(cur_data, `Operating System` %in% input$OS_selection)
+      if(length(input$model_selection)>0) cur_data <- filter(cur_data, `Device Model` %in% input$model_selection)
+      
+      if(length(input$var1_range[1])>0) {
+        cur_data <- cur_data |>
+          filter(!!sym(input$num_var1) >= input$var1_range[1]) |>
+          filter(!!sym(input$num_var1) <= input$var1_range[2])}
+      
+      if(length(input$var2_range[1])>0) {
+        cur_data <- cur_data |>
+          filter(!!sym(input$num_var2) >= input$var2_range[1]) |>
+          filter(!!sym(input$num_var2) <= input$var2_range[2])}
+      
       write.csv(cur_data, file)
     }
   )

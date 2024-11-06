@@ -1,33 +1,66 @@
 library(shiny)
+library(bslib)
 library(readr)
 library(tidyverse)
 library(ggstatsplot)
 
 df <- read_csv("user_behavior_dataset.csv")
 
+all_num_vars <- c("App Usage Time (min/day)", "Screen On Time (hours/day)", "Battery Drain (mAh/day)", "Number of Apps Installed", "Data Usage (MB/day)", "Age")
+
+col_extrema <- function(df) {
+  return(df|>
+           summarize(across(where(is.numeric), 
+                            list("max" = max, "min" = min), 
+                            .names = "{.fn}_{.col}")))
+}
+
+extreme_vals = unlist(col_extrema(df))
+
 ui <- fluidPage(
   sidebarLayout(
     sidebarPanel(
-      "Options",
+      h2("Options"),
+      
+      h3("Filter Data Based on Categorical Varaibles"),
       selectInput("OS_selection", "Operating System", choices=c("Android", "iOS"), multiple=TRUE),
       selectInput("model_selection", "Device Model", choices=c("Google Pixel 5", "OnePlus 9", "Xiaomi Mi 11", "	iPhone 12", "Samsung Galaxy S21"), multiple=TRUE),
-      checkboxGroupInput("num_vars", "Numeric Variables",
-                         choiceValues=c("App Usage Time (min/day)", "Screen On Time (hours/day)", "Battery Drain (mAh/day)", "Number of Apps Installed", "Data Usage (MB/day)", "Age"), 
-                         choiceNames=c("App Usage Time", "Screen On Time", "Battery Drain", "Number of Apps Installed", "Data Usage", "Age")),
-      sliderInput("var1_range", "Range for first variable", min=0, max=1000, value=c(0, 1000)),
-      sliderInput("var2_range", "Range for second variable", min=0, max=1000, value=c(0, 1000)),
+      
+      h3("Filter Data Based on Numerical Variables"),
+      
+      selectInput("num_var1", "Numeric Variable 1", choices=c("", all_num_vars)),
+      conditionalPanel(
+        condition = "input.num_var1.length !== 0" ,
+        sliderInput("var1_range", "Choose your range of values:", min=0, max=1000, value=c(0, 1000)),
+      ),
+      
+      selectInput("num_var2", "Numeric Variable 2", choices=c("", all_num_vars)),
+      conditionalPanel(
+        condition = "input.num_var2.length !== 0" ,
+        sliderInput("var2_range", "Choose your range of values:", min=0, max=1000, value=c(0, 1000)),
+      ),
+      
       actionButton("go_subset", "Filter Data")
     ),
     
     mainPanel(
       tabsetPanel(
         tabPanel(
-          "Data Exploration", "tab3 content"
+          "Data Exploration",
+          navset_card_underline(
+            
+            nav_panel("Plots", "content1"),
+            
+            nav_panel("Numerical Summary", "content2"),
+            
+            nav_panel("Data", "content3"),
+            
+          )
         ),
         
         tabPanel(
           "Data Download", 
-          DT::dataTableOutput('tbl'),
+          DT::DTOutput('tbl'),
           downloadButton("go_download", "Download Data")
         ),
         
@@ -71,6 +104,44 @@ ui <- fluidPage(
 
 server <- function(input, output, session) {
   cur_data <- df
+  
+  # update based on numeric variable 1 being selected
+  observeEvent(input$num_var1, {
+    
+    min <- extreme_vals[paste0("min_", input$num_var1)][[1]]
+    max <- extreme_vals[paste0("max_", input$num_var1)][[1]]
+    
+    updateSliderInput(session, "var1_range", max=max, min=min, value=c(min, max))
+  })
+  
+  # update based on numeric variable 2 being selected
+  observeEvent(input$num_var2, {
+    
+    min <- extreme_vals[paste0("min_", input$num_var2)][[1]]
+    max <- extreme_vals[paste0("max_", input$num_var2)][[1]]
+    
+    updateSliderInput(session, "var2_range", max=max, min=min, value=c(min, max))
+  })
+  
+  # subset data on download page when user clicks "filter data" action button
+  observeEvent(input$go_subset, {
+    print("cur_data1")
+    print(cur_data)
+    
+    cur_data <- cur_data |>
+      filter(`Operating System` %in% input$OS_selection) |>
+      filter(`Device Model` %in% input$model_selection) |>
+      filter(!!sym(input$num_var1) >= input$var1_range[1]) |>
+      filter(!!sym(input$num_var1) <= input$var1_range[2]) |>
+      filter(!!sym(input$num_var2) >= input$var2_range[1]) |>
+      filter(!!sym(input$num_var2) <= input$var2_range[2])
+    
+    print("cur_data2")
+    print(cur_data)
+    
+    proxy <- DT::dataTableProxy('tbl')
+    DT::replaceData(proxy, cur_data)
+  })
   
   # table to display in Data Download tab
   output$tbl = DT::renderDT(cur_data)

@@ -41,8 +41,8 @@ find_center_and_spread <- function(df, group) {
   return(df|>
     group_by({{group}}) |>
     summarize(across(where(is.numeric), 
-                 list("mean" = mean, "median" = median, "sd"=sd, "IQR"=IQR), 
-                 .names = "{.fn}_{.col}")))
+               list("mean" = mean, "median" = median, "sd"=sd, "IQR"=IQR), 
+               .names = "{.fn}_{.col}")))
 }
 
 # update column types so IDs and behavior class are not numeric

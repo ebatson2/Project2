@@ -191,64 +191,52 @@ Female   Male
 <span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>find_center_and_spread <span class="ot">&lt;-</span> <span class="cf">function</span>(df, group) {</span>
 <span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">return</span>(df<span class="sc">|&gt;</span></span>
 <span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">group_by</span>({{group}}) <span class="sc">|&gt;</span></span>
-<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">summarize</span>(<span class="fu">across</span>(<span class="fu">where</span>(is.numeric), </span>
-<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>                 <span class="fu">list</span>(<span class="st">"mean"</span> <span class="ot">=</span> mean, <span class="st">"median"</span> <span class="ot">=</span> median, <span class="st">"sd"</span><span class="ot">=</span>sd, <span class="st">"IQR"</span><span class="ot">=</span>IQR), </span>
-<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>                 <span class="at">.names =</span> <span class="st">"{.fn}_{.col}"</span>)))</span>
-<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb16-10"><a href="#cb16-10" aria-hidden="true" tabindex="-1"></a><span class="co"># update column types so IDs and behavior class are not numeric</span></span>
-<span id="cb16-11"><a href="#cb16-11" aria-hidden="true" tabindex="-1"></a>df <span class="ot">&lt;-</span> df <span class="sc">|&gt;</span></span>
-<span id="cb16-12"><a href="#cb16-12" aria-hidden="true" tabindex="-1"></a>      <span class="fu">mutate</span>(<span class="st">`</span><span class="at">User ID</span><span class="st">`</span><span class="ot">=</span><span class="fu">as.character</span>(<span class="st">`</span><span class="at">User ID</span><span class="st">`</span>)) <span class="sc">|&gt;</span></span>
-<span id="cb16-13"><a href="#cb16-13" aria-hidden="true" tabindex="-1"></a>      <span class="fu">mutate</span>(<span class="st">`</span><span class="at">User Behavior Class</span><span class="st">`</span><span class="ot">=</span><span class="fu">as.factor</span>(<span class="st">`</span><span class="at">User Behavior Class</span><span class="st">`</span>))</span>
-<span id="cb16-14"><a href="#cb16-14" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb16-15"><a href="#cb16-15" aria-hidden="true" tabindex="-1"></a><span class="co"># find centers and spread for all numeric vars, grouped by each categorical var</span></span>
-<span id="cb16-16"><a href="#cb16-16" aria-hidden="true" tabindex="-1"></a><span class="fu">find_center_and_spread</span>(df, <span class="st">`</span><span class="at">Device Model</span><span class="st">`</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>    <span class="co"># summarize(across(where(is.numeric), </span></span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>    <span class="fu">summarize</span>(<span class="fu">across</span>(<span class="fu">c</span>(Age, <span class="st">`</span><span class="at">Number of Apps Installed</span><span class="st">`</span>), </span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>                 <span class="fu">list</span>(<span class="st">"mean"</span> <span class="ot">=</span> mean, <span class="st">"median"</span> <span class="ot">=</span> median, <span class="st">"sd"</span><span class="ot">=</span>sd, <span class="st">"IQR"</span><span class="ot">=</span>IQR), </span>
+<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a>                 <span class="at">.names =</span> <span class="st">"{.fn}_{.col}"</span>)))</span>
+<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb16-10"><a href="#cb16-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-11"><a href="#cb16-11" aria-hidden="true" tabindex="-1"></a><span class="co"># update column types so IDs and behavior class are not numeric</span></span>
+<span id="cb16-12"><a href="#cb16-12" aria-hidden="true" tabindex="-1"></a>df <span class="ot">&lt;-</span> df <span class="sc">|&gt;</span></span>
+<span id="cb16-13"><a href="#cb16-13" aria-hidden="true" tabindex="-1"></a>      <span class="fu">mutate</span>(<span class="st">`</span><span class="at">User ID</span><span class="st">`</span><span class="ot">=</span><span class="fu">as.character</span>(<span class="st">`</span><span class="at">User ID</span><span class="st">`</span>)) <span class="sc">|&gt;</span></span>
+<span id="cb16-14"><a href="#cb16-14" aria-hidden="true" tabindex="-1"></a>      <span class="fu">mutate</span>(<span class="st">`</span><span class="at">User Behavior Class</span><span class="st">`</span><span class="ot">=</span><span class="fu">as.factor</span>(<span class="st">`</span><span class="at">User Behavior Class</span><span class="st">`</span>))</span>
+<span id="cb16-15"><a href="#cb16-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-16"><a href="#cb16-16" aria-hidden="true" tabindex="-1"></a><span class="co"># find centers and spread for all numeric vars, grouped by each categorical var</span></span>
+<span id="cb16-17"><a href="#cb16-17" aria-hidden="true" tabindex="-1"></a><span class="fu">find_center_and_spread</span>(df, <span class="st">`</span><span class="at">Device Model</span><span class="st">`</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code># A tibble: 5 × 25
-  `Device Model`     `mean_App Usage Time (min/day)` median_App Usage Time (mi…¹
-  &lt;chr&gt;                                        &lt;dbl&gt;                       &lt;dbl&gt;
-1 Google Pixel 5                                268.                        232.
-2 OnePlus 9                                     270.                        216 
-3 Samsung Galaxy S21                            266.                        217 
-4 Xiaomi Mi 11                                  268.                        217 
-5 iPhone 12                                     282.                        258.
-# ℹ abbreviated name: ¹​`median_App Usage Time (min/day)`
-# ℹ 22 more variables: `sd_App Usage Time (min/day)` &lt;dbl&gt;,
-#   `IQR_App Usage Time (min/day)` &lt;dbl&gt;,
-#   `mean_Screen On Time (hours/day)` &lt;dbl&gt;,
-#   `median_Screen On Time (hours/day)` &lt;dbl&gt;,
-#   `sd_Screen On Time (hours/day)` &lt;dbl&gt;,
-#   `IQR_Screen On Time (hours/day)` &lt;dbl&gt;, …</code></pre>
+<pre><code># A tibble: 5 × 9
+  `Device Model`     mean_Age median_Age sd_Age IQR_Age mean_Number of Apps In…¹
+  &lt;chr&gt;                 &lt;dbl&gt;      &lt;dbl&gt;  &lt;dbl&gt;   &lt;dbl&gt;                    &lt;dbl&gt;
+1 Google Pixel 5         37.8         36   12.1    22                       49.9
+2 OnePlus 9              38.9         40   11.6    20                       50.0
+3 Samsung Galaxy S21     39.1         39   12.4    23                       50.8
+4 Xiaomi Mi 11           37.8         37   11.7    20.8                     49.9
+5 iPhone 12              39.0         39   12.4    22                       52.7
+# ℹ abbreviated name: ¹​`mean_Number of Apps Installed`
+# ℹ 3 more variables: `median_Number of Apps Installed` &lt;dbl&gt;,
+#   `sd_Number of Apps Installed` &lt;dbl&gt;, `IQR_Number of Apps Installed` &lt;dbl&gt;</code></pre>
 </div>
 <div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="fu">find_center_and_spread</span>(df, <span class="st">`</span><span class="at">Operating System</span><span class="st">`</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code># A tibble: 2 × 25
-  `Operating System` `mean_App Usage Time (min/day)` median_App Usage Time (mi…¹
-  &lt;chr&gt;                                        &lt;dbl&gt;                       &lt;dbl&gt;
-1 Android                                       268.                        225 
-2 iOS                                           282.                        258.
-# ℹ abbreviated name: ¹​`median_App Usage Time (min/day)`
-# ℹ 22 more variables: `sd_App Usage Time (min/day)` &lt;dbl&gt;,
-#   `IQR_App Usage Time (min/day)` &lt;dbl&gt;,
-#   `mean_Screen On Time (hours/day)` &lt;dbl&gt;,
-#   `median_Screen On Time (hours/day)` &lt;dbl&gt;,
-#   `sd_Screen On Time (hours/day)` &lt;dbl&gt;,
-#   `IQR_Screen On Time (hours/day)` &lt;dbl&gt;, …</code></pre>
+<pre><code># A tibble: 2 × 9
+  `Operating System` mean_Age median_Age sd_Age IQR_Age mean_Number of Apps In…¹
+  &lt;chr&gt;                 &lt;dbl&gt;      &lt;dbl&gt;  &lt;dbl&gt;   &lt;dbl&gt;                    &lt;dbl&gt;
+1 Android                38.4         38   11.9      21                     50.1
+2 iOS                    39.0         39   12.4      22                     52.7
+# ℹ abbreviated name: ¹​`mean_Number of Apps Installed`
+# ℹ 3 more variables: `median_Number of Apps Installed` &lt;dbl&gt;,
+#   `sd_Number of Apps Installed` &lt;dbl&gt;, `IQR_Number of Apps Installed` &lt;dbl&gt;</code></pre>
 </div>
 <div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="fu">find_center_and_spread</span>(df, Gender)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code># A tibble: 2 × 25
-  Gender mean_App Usage Time (mi…¹ median_App Usage Tim…² sd_App Usage Time (m…³
-  &lt;chr&gt;                      &lt;dbl&gt;                  &lt;dbl&gt;                  &lt;dbl&gt;
-1 Female                      272.                    230                   174.
-2 Male                        270.                    222                   180.
-# ℹ abbreviated names: ¹​`mean_App Usage Time (min/day)`,
-#   ²​`median_App Usage Time (min/day)`, ³​`sd_App Usage Time (min/day)`
-# ℹ 21 more variables: `IQR_App Usage Time (min/day)` &lt;dbl&gt;,
-#   `mean_Screen On Time (hours/day)` &lt;dbl&gt;,
-#   `median_Screen On Time (hours/day)` &lt;dbl&gt;,
-#   `sd_Screen On Time (hours/day)` &lt;dbl&gt;,
-#   `IQR_Screen On Time (hours/day)` &lt;dbl&gt;, …</code></pre>
+<pre><code># A tibble: 2 × 9
+  Gender mean_Age median_Age sd_Age IQR_Age `mean_Number of Apps Installed`
+  &lt;chr&gt;     &lt;dbl&gt;      &lt;dbl&gt;  &lt;dbl&gt;   &lt;dbl&gt;                           &lt;dbl&gt;
+1 Female     38.4         37   11.8      21                            50.2
+2 Male       38.6         39   12.2      22                            51.1
+# ℹ 3 more variables: `median_Number of Apps Installed` &lt;dbl&gt;,
+#   `sd_Number of Apps Installed` &lt;dbl&gt;, `IQR_Number of Apps Installed` &lt;dbl&gt;</code></pre>
 </div>
 </div>
 </section>

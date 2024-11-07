@@ -3,11 +3,24 @@ library(bslib)
 library(readr)
 library(tidyverse)
 library(ggstatsplot)
+library(plotly)
 
 df <- read_csv("user_behavior_dataset.csv")
 
-all_num_vars <- c("App Usage Time (min/day)", "Screen On Time (hours/day)", "Battery Drain (mAh/day)", "Number of Apps Installed", "Data Usage (MB/day)", "Age")
-all_cat_vars <- c("Device Model", "Operating System", "Gender", "User Behavior Class")
+# update column types so IDs and behavior class are not numeric and get rid of spaces
+df <- df |>
+  mutate(User_ID=as.character(`User ID`)) |>
+  mutate(User_Behavior_Class=as.factor(`User Behavior Class`)) |>
+  rename(Operating_System=`Operating System`) |>
+  rename(Device_Model=`Device Model`) |>
+  rename(App_Usage_Time_min_per_day=`App Usage Time (min/day)`) |>
+  rename(Screen_On_Time_hr_per_day=`Screen On Time (hours/day)`) |>
+  rename(Battery_Drain_mAh_per_day=`Battery Drain (mAh/day)`) |>
+  rename(Data_Usage_MB_per_day=`Data Usage (MB/day)`) |>
+  rename(Number_of_Apps_Installed=`Number of Apps Installed`)
+
+all_num_vars <- c("App_Usage_Time_min_per_day", "Screen_On_Time_hr_per_day", "Battery_Drain_mAh_per_day", "Number_of_Apps_Installed", "Data_Usage_MB_per_day", "Age")
+all_cat_vars <- c("Device_Model", "Operating_System", "Gender", "User_Behavior_Class")
 
 col_extrema <- function(df) {
   return(df|>
@@ -17,6 +30,22 @@ col_extrema <- function(df) {
 }
 
 extreme_vals = unlist(col_extrema(df))
+
+# function for finding measures of center and spread
+find_center_and_spread <- function(df, group="None", num_vars) {
+  if(group %in% all_cat_vars){
+    return(df|>
+       group_by_({{group}}) |>
+       summarize(across(all_of(num_vars), 
+          list("mean" = mean, "median" = median, "sd"=sd, "IQR"=IQR), 
+          .names = "{.fn}_{.col}")))
+  } else {
+    return(df|>
+      summarize(across(all_of(num_vars), 
+        list("mean" = mean, "median" = median, "sd"=sd, "IQR"=IQR), 
+        .names = "{.fn}_{.col}")))
+  }
+}
 
 ui <- fluidPage(
   sidebarLayout(
@@ -58,16 +87,26 @@ ui <- fluidPage(
                       conditionalPanel(
                         condition="input.show_num_summary",
                         selectInput("summary_num_vars", "Numerical Variables", choices=c(all_num_vars), multiple=TRUE),
-                        actionButton("go_num_summary", "Get Summaries"),
-                        # DT::DTOutput('num_summary')
+                        
+                        checkboxInput("across_cat", "Get summary across a categorical variable"),
+                        conditionalPanel(
+                          condition="input.across_cat",
+                          # selectInput("across_cat_var", "Categorical Variable", choices=c(all_cat_vars)),
+                          selectizeInput("across_cat_var", "Categorical Variable", choices=c("", all_cat_vars)),
+                        ),
+                          
+                        actionButton("go_num_summary", "Get Summary"),
+                        
+                        uiOutput("num_summary_text"),
+                        DT::DTOutput('num_summary')
                       ),
 
                       checkboxInput("show_cat_summary", "Get summary of categorical variables"),
                       conditionalPanel(
                         condition="input.show_cat_summary",
-                        selectInput("summary_cat_var1", "Categorical Variables", choices=c(all_cat_vars)),
-                        selectInput("summary_cat_var2", "Categorical Variables", choices=c(all_cat_vars)),
-                        actionButton("go_cat_summary", "Get Summaries"),
+                        selectInput("summary_cat_var1", "Categorical Variables", choices=c("", all_cat_vars)),
+                        selectInput("summary_cat_var2", "Categorical Variables", choices=c("", all_cat_vars)),
+                        actionButton("go_cat_summary", "Get Summary"),
                         uiOutput("cat_summary_one_way_text"),
                         DT::DTOutput('cat_summary_one_way'),
                         uiOutput("cat_summary_two_way_text"),
@@ -76,7 +115,35 @@ ui <- fluidPage(
             ),
             
             # Graphical Summaries
-            nav_panel("Plots", "content1")
+            nav_panel("Plots",
+                      h2("Density Plots"),
+                      selectInput("plot1_x_var", "Select Variable for x-axis", choices=c("App_Usage_Time_min_per_day", "Age")),
+                      selectInput("plot1_color_var", "Select Variable for Color", choices=c("Gender", "Operating_System")),
+                      shinycssloaders::withSpinner(plotlyOutput("plot1")),
+                      
+                      h2("Scatter Plots"),
+                      selectInput("plot2_x_var", "Select Variable for x-axis", choices=c("Operating_System", "Age")),
+                      selectInput("plot2_y_var", "Select Variable for y-axis", choices=c("App_Usage_Time_min_per_day", "Screen_On_Time_hr_per_day", "Number_of_Apps_Installed")),
+                      selectInput("plot2_color_var", "Select Variable for Color", choices=c("Gender", "Operating_System")),
+                      shinycssloaders::withSpinner(plotlyOutput("plot2")),
+                      
+                      h2("Scatter Plots with Faceting"),
+                      selectInput("plot3_x_var", "Select Variable for x-axis", choices=c("Screen_On_Time_hr_per_day", "App_Usage_Time_min_per_day")),
+                      selectInput("plot3_y_var", "Select Variable for y-axis", choices=c("App_Usage_Time_min_per_day", "Battery_Drain_mAh_per_day")),
+                      selectInput("plot3_color_var", "Select Variable for Color", choices=c("Gender", "Operating_System")),
+                      selectInput("plot3_facet_var", "Select Variable for faceting", choices=c("Operating_System", "Device_Model")),
+                      shinycssloaders::withSpinner(plotlyOutput("plot3")),
+                      
+                      h2("Boxplots"),
+                      selectInput("plot4_x_var", "Select Variable for x-axis", choices=c("Operating_System", "Device_Model")),
+                      selectInput("plot4_y_var", "Select Variable for y-axis", choices=c("Battery_Drain_mAh_per_day", "Age")),
+                      shinycssloaders::withSpinner(plotlyOutput("plot4")),
+                      
+                      h2("Heat Maps"),
+                      selectInput("plot5_x_var", "Select Variable for x-axis", choices=c("Screen_On_Time_hr_per_day", "Age")),
+                      selectInput("plot5_y_var", "Select Variable for y-axis", choices=c("Battery_Drain_mAh_per_day", "Screen_On_Time_hr_per_day")),
+                      shinycssloaders::withSpinner(plotlyOutput("plot5"))
+            )
           )
         ),
         
@@ -91,7 +158,7 @@ ui <- fluidPage(
         tabPanel(
           "About",
           h2("Purpose"),
-          p("This app allows users to explore the mobile phone data from kaggle. 
+          p("This app allows users to explore the mobile phone dataset from kaggle. 
             Users can choose which numeric variables to include, as well as choose which levels of each categorical variable to include in plot generation. 
             The tabs can then be used to explore the output given by subsetting."),
           h2("Background"),
@@ -133,8 +200,8 @@ server <- function(input, output, session) {
     filtered_data <- df
     
     # check which filter values exist and use them to filter the data
-    if(length(input$OS_selection)>0)    filtered_data <- filter(filtered_data, `Operating System` %in% input$OS_selection)
-    if(length(input$model_selection)>0) filtered_data <- filter(filtered_data, `Device Model` %in% input$model_selection)
+    if(length(input$OS_selection)>0)    filtered_data <- filter(filtered_data, `Operating_System` %in% input$OS_selection)
+    if(length(input$model_selection)>0) filtered_data <- filter(filtered_data, `Device_Model` %in% input$model_selection)
     
     # if(length(input$var1_range[1])>0) {
     if(length(input$var1_range[1])>0 && (input$num_var1 %in% all_num_vars)) {
@@ -173,8 +240,8 @@ server <- function(input, output, session) {
     cur_data <- df
     
     # check which filter values exist and use them to filter the data
-    if(length(input$OS_selection)>0)    cur_data <- filter(cur_data, `Operating System` %in% input$OS_selection)
-    if(length(input$model_selection)>0) cur_data <- filter(cur_data, `Device Model` %in% input$model_selection)
+    if(length(input$OS_selection)>0)    cur_data <- filter(cur_data, `Operating_System` %in% input$OS_selection)
+    if(length(input$model_selection)>0) cur_data <- filter(cur_data, `Device_Model` %in% input$model_selection)
 
     if(length(input$var1_range[1])>0) {
       cur_data <- cur_data |>
@@ -194,41 +261,106 @@ server <- function(input, output, session) {
   # table to display in Data Download tab
   output$data_table = DT::renderDT(cur_data)
   
-  toListen <- reactive({list(input$go_cat_summary, input$go_subset)})
+  cat_listen <- reactive({list(input$go_cat_summary, input$go_subset)})
   
   # Data Exploration tab: respond to request for categorical variable summary
-  # observeEvent(input$go_cat_summary, {
-  observeEvent(toListen(), {
-    data <- get_filtered_data()
-
-    # generate contingency tables
-    one_way <- as.data.frame(table(data[,c(input$summary_cat_var1)]))
-    two_way <- as.data.frame(table(as.vector(unlist(data[,c(input$summary_cat_var1)])), as.vector(unlist(data[,c(input$summary_cat_var2)]))))
-    colnames(two_way) <- c(input$summary_cat_var1, input$summary_cat_var2, "Freq")
-
-    # output one one-way table and one two-way table
-    output$cat_summary_one_way = DT::renderDT(one_way)
-    output$cat_summary_two_way = DT::renderDT(two_way)
+  observeEvent(cat_listen(), {
     
-    # render table title for one-way contingency table
-    output$cat_summary_one_way_text <- renderUI({
-      text <- isolate(paste0("One-way contingency table for ", input$summary_cat_var1))
-      h2(text)
-    })
-    
-    # render table title for two-way contingency table
-    output$cat_summary_two_way_text <- renderUI({
-      text <- isolate(paste0("Two-way contingency table for ", input$summary_cat_var1, " and ", input$summary_cat_var2))
-      h2(text)
-    })
+    if(input$summary_cat_var1 %in% all_cat_vars){
+      
+      data <- get_filtered_data()
+  
+      # generate contingency tables
+      one_way <- as.data.frame(table(data[,c(input$summary_cat_var1)]))
+      two_way <- as.data.frame(table(as.vector(unlist(data[,c(input$summary_cat_var1)])), as.vector(unlist(data[,c(input$summary_cat_var2)]))))
+      colnames(two_way) <- c(input$summary_cat_var1, input$summary_cat_var2, "Freq")
+  
+      # output one one-way table and one two-way table
+      output$cat_summary_one_way = DT::renderDT(one_way)
+      output$cat_summary_two_way = DT::renderDT(two_way)
+      
+      # render table title for one-way contingency table
+      output$cat_summary_one_way_text <- renderUI({
+        text <- isolate(paste0("One-way contingency table for ", input$summary_cat_var1))
+        h2(text)
+      })
+      
+      # render table title for two-way contingency table
+      output$cat_summary_two_way_text <- renderUI({
+        text <- isolate(paste0("Two-way contingency table for ", input$summary_cat_var1, " and ", input$summary_cat_var2))
+        h2(text)
+      })
+    }
   })
+
+  num_listen <- reactive({list(input$go_num_summary, input$go_subset)})
   
   # Data Exploration tab: respond to request for numerical variable summary
-  observeEvent(input$go_num_summary, {
+  observeEvent(num_listen(), {
     data <- get_filtered_data()
-    # output$num_summary = DT::renderDT(as.data.frame(table(data[,c(input$summary_cat_var)])))
-  })
+    
+    # generate and output table
+    summary_table <- find_center_and_spread(data, num_vars=input$summary_num_vars, group=input$across_cat_var)
+    output$num_summary = DT::renderDT(summary_table)
 
+    # render table title
+    output$num_summary_text <- renderUI({
+      h2("Measures of centers and spread")
+    })
+  })  
+
+  # Data Exploration tab: render plots
+  # Density Plots
+  output$plot1 <- renderPlotly({
+    data <- get_filtered_data()
+    plot <- ggplot(data, aes_string(x = input$plot1_x_var)) + 
+      geom_density(alpha = 0.5, aes_string(fill = input$plot1_color_var)) + 
+      ggtitle(paste0(input$plot1_x_var, " By ", input$plot1_color_var))
+    
+    ggplotly(plot)
+  })
+  
+  # Scatter Plots
+  output$plot2 <- renderPlotly({
+    data <- get_filtered_data()
+    plot <- ggplot(data, aes_string(x = input$plot2_x_var, y = input$plot2_y_var, color=input$plot2_color_var)) + 
+      geom_point(position = "jitter") + 
+      ggtitle(paste0(input$plot2_y_var, " vs. ", input$plot2_x_var, " (Color=", input$plot2_color_var, ")"))
+    
+    ggplotly(plot)
+  })
+  
+  # Scatter Plots with faceting
+  output$plot3 <- renderPlotly({
+    data <- get_filtered_data()
+    plot <- ggplot(data, aes_string(x = input$plot3_x_var, y = input$plot3_y_var, color=input$plot3_color_var)) + 
+      geom_point(position = "jitter") + 
+      ggtitle(paste0(input$plot3_y_var, " vs. ", input$plot3_x_var, " By ", input$plot3_facet_var, " (Color=", input$plot3_color_var, ")")) +
+      facet_wrap(~ get(input$plot3_facet_var))
+    
+    ggplotly(plot)
+  })
+  
+  # Boxplots
+  output$plot4 <- renderPlotly({
+    data <- get_filtered_data()
+    plot <- ggplot(data) +
+      geom_boxplot(aes_string(x = input$plot4_x_var, y = input$plot4_y_var, fill=input$plot4_x_var)) + 
+      ggtitle(paste0(input$plot4_y_var, " vs. ", input$plot4_x_var))
+    
+    ggplotly(plot)
+  })
+  
+  # Heat Maps
+  output$plot5 <- renderPlotly({
+    data <- get_filtered_data()
+    plot <- ggplot(data, aes_string(x = input$plot5_x_var, y = input$plot5_y_var)) + 
+      geom_bin_2d() +
+      ggtitle(paste0(input$plot5_y_var, " vs. ", input$plot5_x_var))
+    
+    ggplotly(plot)
+  })
+  
   # handler for download button
   output$go_download <- downloadHandler(
     filename = function() {
@@ -239,8 +371,8 @@ server <- function(input, output, session) {
       cur_data <- df
       
       # check which filter values exist and use them to filter the data
-      if(length(input$OS_selection)>0)    cur_data <- filter(cur_data, `Operating System` %in% input$OS_selection)
-      if(length(input$model_selection)>0) cur_data <- filter(cur_data, `Device Model` %in% input$model_selection)
+      if(length(input$OS_selection)>0)    cur_data <- filter(cur_data, `Operating_System` %in% input$OS_selection)
+      if(length(input$model_selection)>0) cur_data <- filter(cur_data, `Device_Model` %in% input$model_selection)
       
       if(length(input$var1_range[1])>0) {
         cur_data <- cur_data |>

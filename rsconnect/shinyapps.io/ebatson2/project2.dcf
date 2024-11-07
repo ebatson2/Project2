@@ -1,0 +1,10 @@
+name: project2
+title:
+username: ebatson2
+account: ebatson2
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 13261257
+bundleId: 9327982
+url: https://ebatson2.shinyapps.io/project2/
+version: 1

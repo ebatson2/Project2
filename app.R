@@ -7,6 +7,7 @@ library(ggstatsplot)
 df <- read_csv("user_behavior_dataset.csv")
 
 all_num_vars <- c("App Usage Time (min/day)", "Screen On Time (hours/day)", "Battery Drain (mAh/day)", "Number of Apps Installed", "Data Usage (MB/day)", "Age")
+all_cat_vars <- c("Device Model", "Operating System", "Gender", "User Behavior Class")
 
 col_extrema <- function(df) {
   return(df|>
@@ -45,25 +46,48 @@ ui <- fluidPage(
     
     mainPanel(
       tabsetPanel(
+        
+        # Data Exploration tab
         tabPanel(
           "Data Exploration",
           navset_card_underline(
             
-            nav_panel("Plots", "content1"),
+            # Numerical Summaries
+            nav_panel("Numerical Summaries", 
+                      checkboxInput("show_num_summary", "Get summary of numerical variables"),
+                      conditionalPanel(
+                        condition="input.show_num_summary",
+                        selectInput("summary_num_vars", "Numerical Variables", choices=c(all_num_vars), multiple=TRUE),
+                        actionButton("go_num_summary", "Get Summaries"),
+                        # DT::DTOutput('num_summary')
+                      ),
+
+                      checkboxInput("show_cat_summary", "Get summary of categorical variables"),
+                      conditionalPanel(
+                        condition="input.show_cat_summary",
+                        selectInput("summary_cat_var1", "Categorical Variables", choices=c(all_cat_vars)),
+                        selectInput("summary_cat_var2", "Categorical Variables", choices=c(all_cat_vars)),
+                        actionButton("go_cat_summary", "Get Summaries"),
+                        uiOutput("cat_summary_one_way_text"),
+                        DT::DTOutput('cat_summary_one_way'),
+                        uiOutput("cat_summary_two_way_text"),
+                        DT::DTOutput('cat_summary_two_way')
+                      )
+            ),
             
-            nav_panel("Numerical Summary", "content2"),
-            
-            nav_panel("Data", "content3"),
-            
+            # Graphical Summaries
+            nav_panel("Plots", "content1")
           )
         ),
         
+        # Data Download tab
         tabPanel(
           "Data Download", 
-          DT::DTOutput('tbl'),
+          DT::DTOutput('data_table'),
           downloadButton("go_download", "Download Data")
         ),
         
+        # About tab
         tabPanel(
           "About",
           h2("Purpose"),
@@ -105,6 +129,27 @@ ui <- fluidPage(
 server <- function(input, output, session) {
   cur_data <- df
   
+  get_filtered_data <- reactive({
+    filtered_data <- df
+    
+    # check which filter values exist and use them to filter the data
+    if(length(input$OS_selection)>0)    filtered_data <- filter(filtered_data, `Operating System` %in% input$OS_selection)
+    if(length(input$model_selection)>0) filtered_data <- filter(filtered_data, `Device Model` %in% input$model_selection)
+    
+    # if(length(input$var1_range[1])>0) {
+    if(length(input$var1_range[1])>0 && (input$num_var1 %in% all_num_vars)) {
+        filtered_data <- filtered_data |>
+        filter(!!sym(input$num_var1) >= input$var1_range[1]) |>
+        filter(!!sym(input$num_var1) <= input$var1_range[2])}
+    
+    if(length(input$var2_range[1])>0 && (input$num_var2 %in% all_num_vars)) {
+      filtered_data <- filtered_data |>
+        filter(!!sym(input$num_var2) >= input$var2_range[1]) |>
+        filter(!!sym(input$num_var2) <= input$var2_range[2])}
+    
+    return (filtered_data)
+  })
+  
   # update based on numeric variable 1 being selected
   observeEvent(input$num_var1, {
     
@@ -142,12 +187,47 @@ server <- function(input, output, session) {
                   filter(!!sym(input$num_var2) <= input$var2_range[2])}
     
     # update download data
-    proxy <- DT::dataTableProxy('tbl')
+    proxy <- DT::dataTableProxy('data_table')
     DT::replaceData(proxy, cur_data)
   })
   
   # table to display in Data Download tab
-  output$tbl = DT::renderDT(cur_data)
+  output$data_table = DT::renderDT(cur_data)
+  
+  toListen <- reactive({list(input$go_cat_summary, input$go_subset)})
+  
+  # Data Exploration tab: respond to request for categorical variable summary
+  # observeEvent(input$go_cat_summary, {
+  observeEvent(toListen(), {
+    data <- get_filtered_data()
+
+    # generate contingency tables
+    one_way <- as.data.frame(table(data[,c(input$summary_cat_var1)]))
+    two_way <- as.data.frame(table(as.vector(unlist(data[,c(input$summary_cat_var1)])), as.vector(unlist(data[,c(input$summary_cat_var2)]))))
+    colnames(two_way) <- c(input$summary_cat_var1, input$summary_cat_var2, "Freq")
+
+    # output one one-way table and one two-way table
+    output$cat_summary_one_way = DT::renderDT(one_way)
+    output$cat_summary_two_way = DT::renderDT(two_way)
+    
+    # render table title for one-way contingency table
+    output$cat_summary_one_way_text <- renderUI({
+      text <- isolate(paste0("One-way contingency table for ", input$summary_cat_var1))
+      h2(text)
+    })
+    
+    # render table title for two-way contingency table
+    output$cat_summary_two_way_text <- renderUI({
+      text <- isolate(paste0("Two-way contingency table for ", input$summary_cat_var1, " and ", input$summary_cat_var2))
+      h2(text)
+    })
+  })
+  
+  # Data Exploration tab: respond to request for numerical variable summary
+  observeEvent(input$go_num_summary, {
+    data <- get_filtered_data()
+    # output$num_summary = DT::renderDT(as.data.frame(table(data[,c(input$summary_cat_var)])))
+  })
 
   # handler for download button
   output$go_download <- downloadHandler(
